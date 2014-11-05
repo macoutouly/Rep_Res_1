@@ -1,0 +1,79 @@
+---
+title: "Reproducible Research Assignment 1"
+author: "mac"
+date: "4 novembre 2014"
+output: html_document
+---
+**What is mean total number of steps taken per day?**
+
+Make an histogram of the total number of steps taken each day.
+```{r}
+setwd("/Users/mac/Documents/BigData/datasciencecoursera/ReproRes")
+activ<-read.csv("activity.csv",sep=",")
+# Prepare somewhere to store the values of interest
+with(activ,tapply(steps,date, sum,na.rm=T)) ->sums
+# Plotting a barplot with the collected values
+barplot(sums,xlab="Date",ylab="Steps",main="Steps per day")
+```
+
+Calculate and Report the mean and the median total number of steps taken per day 
+```{r}
+print (mean(sums,na.rm = T))
+print (median(sums,na.rm = T))
+```
+**What is the average daily activity pattern?**
+```{r}
+#Calculating means for each interval
+with(activ,tapply(steps,interval, mean,na.rm=T)) ->interval_means
+
+plot(unique(activ$interval),interval_means,type="l",ylab="number of steps",xlab="intervals")
+#Retrieving the maximum of the interval means
+index_interest<-which.max(interval_means)
+#Retrieving the corresponding index
+print(activ$interval[[index_interest]])
+```
+**Imputing missing values**
+Print the number of rows with NAs
+```{r}
+indexes <- which(is.na(activ))
+print (nrow(activ[indexes,]))
+```
+Devise a strategy for filling in all of the missing values in the dataset.
+
+```{r}
+#Creating a new column with the corresponding interval means
+activ<-cbind(activ,rep(interval_means,61))
+#adding the right name on the 4th column
+colnames(activ) <-c("steps","date","interval","interval_means")
+# inject interval means values on the right positions
+activ[indexes,]$steps <- activ[indexes,]$interval_means
+# We calculate a new sum
+with(activ,tapply(steps,date, sum,na.rm=T)) ->sums2
+# Plotting a barplot with the collected values
+barplot(sums2,xlab="Date",ylab="Steps",main="Steps per day")
+print (mean(sums2,na.rm=T))
+print (median(sums2,na.rm=T))
+```
+After having imputing the mean number of steps in missing values, the mean and the median have shifted and are now equal.
+
+**Are there differences in activity patterns between weekdays and weekends?**
+```{r}
+#Creating the weekends variable which determine wether the date is in a weekend
+weekends <- weekdays(as.Date(activ$date)) %in% c("Samedi","Dimanche")
+
+library(lattice)
+#Adding the variable to the data frame
+activ<-cbind(activ,weekends)
+print(head(activ))
+#Aggregating infos in a new data frame (newdf)
+aggregate(steps~interval+weekends,activ,mean)  -> newdf
+
+#Plotting the data
+xyplot(steps~interval|weekends,data=newdf,type="l",main="Average number of steps taken ",ylab="Number os steps",xlab="Intervals",strip=strip.custom(factor.levels=c("WeekDays","WeekEnd")))
+
+```
+
+
+During week ends the number of steps reaches a higher maximum than in week days. On the other hand, the average number of steps seems to be higher.
+
+
